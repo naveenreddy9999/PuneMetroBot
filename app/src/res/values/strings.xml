@@ -1,5 +1,0 @@
-<?xml version="1.0" encoding="utf-8"?>
-<resources>
-    <string name="app_name">Pune Metro Bot</string>
-    <string name="accessibility_description">Pune Metro Bot automates ticket booking in the Pune Metro Rail app by tapping From Station, To Station, and Book Ticket buttons automatically.</string>
-</resources>
