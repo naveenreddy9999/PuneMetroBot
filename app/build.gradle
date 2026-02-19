@@ -3,18 +3,21 @@ plugins {
 }
 
 android {
-    compileSdk 35
+    compileSdk 36
     namespace 'com.punemetroautomation'
 
     defaultConfig {
         applicationId "com.punemetroautomation"
         minSdk 24
-        targetSdk 35
+        targetSdk 36
         versionCode 1
         versionName "1.0"
     }
 
     buildTypes {
+        debug {
+            debuggable true
+        }
         release {
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
