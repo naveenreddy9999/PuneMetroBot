@@ -15,7 +15,7 @@ public class MainActivity extends AppCompatActivity {
 
     private Spinner spinnerFrom, spinnerTo;
     private Button btnStart, btnEnableAccess;
-    private TextView tvStatus, tvStepIndicator;
+    private TextView tvStatus;
 
     private final String[] STATIONS = {
         "Pimpri", "Pimpri Chinchwad", "Sant Tukaram Nagar", "Nashik Phata",
@@ -29,114 +29,95 @@ public class MainActivity extends AppCompatActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        setContentView(R.layout.activity_main);
 
-        try {
-            setContentView(R.layout.activity_main);
+        spinnerFrom     = findViewById(R.id.spinnerFrom);
+        spinnerTo       = findViewById(R.id.spinnerTo);
+        btnStart        = findViewById(R.id.btnStart);
+        btnEnableAccess = findViewById(R.id.btnEnableAccess);
+        tvStatus        = findViewById(R.id.tvStatus);
 
-            spinnerFrom = findViewById(R.id.spinnerFrom);
-            spinnerTo   = findViewById(R.id.spinnerTo);
-            btnStart        = findViewById(R.id.btnStart);
-            btnEnableAccess = findViewById(R.id.btnEnableAccess);
-            tvStatus        = findViewById(R.id.tvStatus);
-            tvStepIndicator = findViewById(R.id.tvStepIndicator);
+        ArrayAdapter<String> adapter = new ArrayAdapter<>(
+                this,
+                android.R.layout.simple_spinner_item,
+                STATIONS);
+        adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+        spinnerFrom.setAdapter(adapter);
+        spinnerTo.setAdapter(adapter);
+        spinnerTo.setSelection(10);
 
-            ArrayAdapter<String> adapter = new ArrayAdapter<>(
-                    this, android.R.layout.simple_spinner_dropdown_item, STATIONS);
-            spinnerFrom.setAdapter(adapter);
-            spinnerTo.setAdapter(adapter);
-            spinnerTo.setSelection(10);
+        btnEnableAccess.setOnClickListener(v -> openAccessibilitySettings());
+        btnStart.setOnClickListener(v -> startBot());
 
-            BotStatusManager.setCallback(status ->
-                runOnUiThread(() -> {
-                    if (tvStatus != null) tvStatus.setText(status);
-                })
-            );
-
-            btnEnableAccess.setOnClickListener(v -> openAccessibilitySettings());
-            btnStart.setOnClickListener(v -> startBot());
-
-        } catch (Exception e) {
-            Toast.makeText(this, "Error: " + e.getMessage(), Toast.LENGTH_LONG).show();
-        }
+        BotStatusManager.setCallback(status ->
+                runOnUiThread(() -> tvStatus.setText(status)));
     }
 
     @Override
     protected void onResume() {
         super.onResume();
-        checkAccessibilityAndUpdateUI();
+        updateUI();
     }
 
-    private void checkAccessibilityAndUpdateUI() {
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        BotStatusManager.setCallback(null);
+    }
+
+    private void updateUI() {
         if (isAccessibilityEnabled()) {
             btnEnableAccess.setVisibility(View.GONE);
             btnStart.setEnabled(true);
-            btnStart.setAlpha(1.0f);
-            tvStatus.setText("Bot ready! Select stations and tap START BOT");
+            tvStatus.setText("Bot ready! Select stations and tap START BOT.");
             tvStatus.setBackgroundColor(0xFFE8F5E9);
             tvStatus.setTextColor(0xFF2E7D32);
         } else {
             btnEnableAccess.setVisibility(View.VISIBLE);
             btnStart.setEnabled(false);
-            btnStart.setAlpha(0.5f);
-            tvStatus.setText("Please enable Accessibility Permission first!");
+            tvStatus.setText("Please tap ENABLE BOT PERMISSION button above first!");
             tvStatus.setBackgroundColor(0xFFFFF3E0);
             tvStatus.setTextColor(0xFFE65100);
         }
     }
 
     private void startBot() {
-        try {
-            String from = spinnerFrom.getSelectedItem().toString();
-            String to   = spinnerTo.getSelectedItem().toString();
+        String from = spinnerFrom.getSelectedItem().toString();
+        String to   = spinnerTo.getSelectedItem().toString();
 
-            if (from.equals(to)) {
-                Toast.makeText(this, "From and To cannot be same!", Toast.LENGTH_SHORT).show();
-                return;
-            }
-
-            MetroBotService service = MetroBotService.getInstance();
-            if (service == null) {
-                Toast.makeText(this,
-                    "Bot service not running. Enable Accessibility first!",
-                    Toast.LENGTH_LONG).show();
-                openAccessibilitySettings();
-                return;
-            }
-
-            tvStatus.setText("Bot starting...\nFrom: " + from + "\nTo: " + to);
-            tvStatus.setBackgroundColor(0xFFE3F2FD);
-            tvStatus.setTextColor(0xFF0D47A1);
-            service.startBot(from, to);
-
-        } catch (Exception e) {
-            Toast.makeText(this, "Error: " + e.getMessage(), Toast.LENGTH_LONG).show();
+        if (from.equals(to)) {
+            Toast.makeText(this, "From and To stations cannot be the same!", Toast.LENGTH_SHORT).show();
+            return;
         }
+
+        MetroBotService service = MetroBotService.getInstance();
+        if (service == null) {
+            Toast.makeText(this, "Please enable Accessibility permission first!", Toast.LENGTH_LONG).show();
+            openAccessibilitySettings();
+            return;
+        }
+
+        tvStatus.setText("Bot running...\nFrom: " + from + " -> To: " + to);
+        tvStatus.setBackgroundColor(0xFFE3F2FD);
+        tvStatus.setTextColor(0xFF0D47A1);
+        service.startBot(from, to);
     }
 
     private void openAccessibilitySettings() {
         Toast.makeText(this,
-            "Find Pune Metro Bot and turn it ON",
-            Toast.LENGTH_LONG).show();
+                "Scroll down, find Pune Metro Bot and turn it ON",
+                Toast.LENGTH_LONG).show();
         startActivity(new Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS));
     }
 
     private boolean isAccessibilityEnabled() {
         try {
-            int enabled = Settings.Secure.getInt(
+            String services = Settings.Secure.getString(
                     getContentResolver(),
-                    Settings.Secure.ACCESSIBILITY_ENABLED, 0);
-            if (enabled == 1) {
-                String services = Settings.Secure.getString(
-                        getContentResolver(),
-                        Settings.Secure.ENABLED_ACCESSIBILITY_SERVICES);
-                if (services != null) {
-                    return services.toLowerCase()
-                            .contains(getPackageName().toLowerCase());
-                }
-            }
+                    Settings.Secure.ENABLED_ACCESSIBILITY_SERVICES);
+            return services != null && services.contains(getPackageName());
         } catch (Exception e) {
             return false;
         }
-        return false;
     }
 }
